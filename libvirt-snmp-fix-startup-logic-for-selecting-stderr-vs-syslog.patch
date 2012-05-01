@@ -1,0 +1,65 @@
+From a2bda8490a2be579e381b2e753c87153fd3ad109 Mon Sep 17 00:00:00 2001
+From: Laine Stump <laine@laine.org>
+Date: Tue, 18 Oct 2011 13:07:50 -0400
+Subject: [PATCH RHEL6.2 libvirt-snmp 3/3] fix startup logic for selecting
+ stderr vs syslog
+
+This is a direct cherry-pick of upstream commit
+51e5c3014d7d162d7d8a2aaccb42b6a0092b825d, as a partial solution to:
+
+   https://bugzilla.redhat.com/show_bug.cgi?id=732015
+
+use_syslog was initialized to 0, and then if the "Use stderr" option
+was selected, it was set to ... "0"!
+
+Rather than simply initializing to 1, I decided to reduce confusion by
+renaming the variable to "use_stderr", leave it initialized to 0, then
+set to 1 when the user asks for stderr.
+---
+ src/libvirtMib_subagent.c |   12 ++++++------
+ 1 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/libvirtMib_subagent.c b/src/libvirtMib_subagent.c
+index f5749be..2ce1509 100644
+--- a/src/libvirtMib_subagent.c
++++ b/src/libvirtMib_subagent.c
+@@ -60,7 +60,7 @@ main (int argc, char **argv) {
+   /* Defs for arg-handling code: handles setting of policy-related variables */
+   int          ch;
+   extern char *optarg;
+-  int dont_fork = 0, use_syslog = 0;
++  int dont_fork = 0, use_stderr = 0;
+   char *agentx_socket = NULL;
+ 
+   while ((ch = getopt(argc, argv, "D:fHLMx:")) != EOF)
+@@ -85,7 +85,7 @@ main (int argc, char **argv) {
+       agentx_subagent = 0;
+       break;
+     case 'L':
+-      use_syslog = 0; /* use stderr */
++      use_stderr = 1;
+       break;
+     case 'x':
+       agentx_socket = optarg;
+@@ -134,14 +134,14 @@ main (int argc, char **argv) {
+   }
+ 
+   snmp_disable_log();
+-  if (use_syslog)
+-      snmp_enable_calllog();
+-  else
++  if (use_stderr)
+       snmp_enable_stderrlog();
++  else
++      snmp_enable_calllog();
+ 
+   /* daemonize */
+   if(!dont_fork) {
+-    int rc = netsnmp_daemonize(1,!use_syslog);
++    int rc = netsnmp_daemonize(1, use_stderr);
+     if(rc)
+        exit(-1);
+   }
+-- 
+1.7.4.4
+

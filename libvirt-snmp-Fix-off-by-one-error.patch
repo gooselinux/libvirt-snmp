@@ -1,0 +1,30 @@
+From 70e41b28828b9a57880591252fd34997b0081678 Mon Sep 17 00:00:00 2001
+From: Michal Privoznik <mprivozn@redhat.com>
+Date: Wed, 19 Oct 2011 10:25:16 +0200
+Subject: [PATCH] Fix off-by-one error
+
+as libvirtGuestName_val_ptr_len_ptr should contain the data
+size in bytes. However, without trailing zero. But on the other
+hand, coverity will complain if we don't alocate memory for
+trailing '\0' even if we are not memcpy()-ing it. It's false
+positive then, obviously.
+---
+ src/libvirtGuestTable_data_get.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/src/libvirtGuestTable_data_get.c b/src/libvirtGuestTable_data_get.c
+index 497b3f8..059f4a9 100644
+--- a/src/libvirtGuestTable_data_get.c
++++ b/src/libvirtGuestTable_data_get.c
+@@ -211,7 +211,7 @@ libvirtGuestName_get( libvirtGuestTable_rowreq_ctx *rowreq_ctx, char **libvirtGu
+             return MFD_ERROR;
+         }
+     }
+-    (* libvirtGuestName_val_ptr_len_ptr ) = len;
++    (* libvirtGuestName_val_ptr_len_ptr ) = len - 1;
+     memcpy( (* libvirtGuestName_val_ptr_ptr ),
+     		rowreq_ctx->data.libvirtGuestName, len );
+ 
+-- 
+1.7.4.4
+

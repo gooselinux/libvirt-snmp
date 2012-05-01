@@ -1,0 +1,36 @@
+From c08111aeaf69993e24f496beb468b9a79baf9838 Mon Sep 17 00:00:00 2001
+From: Laine Stump <laine@laine.org>
+Date: Tue, 18 Oct 2011 12:47:45 -0400
+Subject: [PATCH RHEL6.2 libvirt-snmp 2/3] eliminate bogus check for "NULL"
+ array
+
+This is a direct cherry-pick of upstream commit
+e5b3fd6b6ef3cd8fda00f74291e6fb2174cc806b, as a partial solution to:
+
+   https://bugzilla.redhat.com/show_bug.cgi?id=732015
+
+Apparently libvirtGuestUUID was originally a pointer, and the code was
+making sure that it had memory allocated, but now it is an array that
+is contained in the structure, so checking for NULL makes no sense.
+---
+ src/libvirtGuestTable_data_get.c |    4 +---
+ 1 files changed, 1 insertions(+), 3 deletions(-)
+
+diff --git a/src/libvirtGuestTable_data_get.c b/src/libvirtGuestTable_data_get.c
+index cc31e9e..497b3f8 100644
+--- a/src/libvirtGuestTable_data_get.c
++++ b/src/libvirtGuestTable_data_get.c
+@@ -83,9 +83,7 @@ libvirtGuestTable_indexes_set_tbl_idx(libvirtGuestTable_mib_index *tbl_idx, char
+     /*
+      * make sure there is enough space for libvirtGuestUUID data
+      */
+-    if ((NULL == tbl_idx->libvirtGuestUUID) ||
+-        (tbl_idx->libvirtGuestUUID_len <
+-         (libvirtGuestUUID_val_ptr_len))) {
++    if (tbl_idx->libvirtGuestUUID_len < (libvirtGuestUUID_val_ptr_len)) {
+         snmp_log(LOG_ERR,"not enough space for value\n");
+         return MFD_ERROR;
+     }
+-- 
+1.7.4.4
+
